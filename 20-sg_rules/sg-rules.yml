@@ -1,0 +1,26 @@
+bastion:
+- name: bastion
+  description: "Allow traffic from internet to bastion"
+  port: 22
+  src: internet
+  dest: bastion
+  
+mongodb:
+- name: mongodb_bastion
+  description: "Allow traffic from mongdb to bastion"
+  port: 22
+  src: bastion
+  dest: mongodb
+
+- name : mongodb_catalogue
+  description : "Allow traffic from mongodb to catalogue"
+  port : 27017
+  src: catalogue
+  dest: mongodb
+
+- name: mongodb_user
+  description : "Allow traffic from mongodb to user"
+  port : 27017
+  src: user   
+  dest: mongodb
+ 
