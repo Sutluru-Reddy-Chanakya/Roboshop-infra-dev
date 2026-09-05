@@ -7,11 +7,9 @@ dnf install ansible -y
 
 cd /home/ec2-user
 
-# Remove existing directory to ensure fresh clone
-rm -rf Ansible-Roboshop-roles-tf
-
-git clone https://github.com/Sutluru-Reddy-Chanakya/Ansible-Roboshop-roles-tf.git
-cd Ansible-Roboshop-roles-tf
+# Use the correct repository (with underscore)
+git clone https://github.com/Sutluru-Reddy-Chanakya/Ansible_Roboshop_roles.git
+cd Ansible_Roboshop_roles
 git pull
 
 ansible-playbook -e component=$component -e env=$environment roboshop.yml
