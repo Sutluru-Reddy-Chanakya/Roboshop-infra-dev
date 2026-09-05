@@ -30,3 +30,7 @@ data "aws_ssm_parameter" "user_sg_id" {
   name = "/${var.project}/${var.env}/user_sg_id"
 }
 
+data "aws_ssm_parameter" "redis_sg_id" {
+  name = "/${var.project}/${var.env}/redis_sg_id"
+}
+
