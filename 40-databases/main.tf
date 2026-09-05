@@ -13,13 +13,13 @@ resource "aws_instance" "mongodb" {
 }
 
 resource "terraform_data" "bootstrap" {
-  depends_on = [aws_instance.mongodb]
+#depends_on = [aws_instance.mongodb]
   
-  triggers_replace = [
-    aws_instance.mongodb.id
-  ]
+   triggers_replace = [
+     aws_instance.mongodb.id
+   ]
 
-  connection {
+ connection {
     type     = "ssh"
     user     = "ec2-user"
     password = "DevOps321"
@@ -37,4 +37,4 @@ resource "terraform_data" "bootstrap" {
       "sudo sh /tmp/bootstrap.sh mongodb"
     ]
   }
-}
+ }
