@@ -19,9 +19,9 @@ data "aws_ami" "joindevops" {
 }
 
 data "aws_ssm_parameter" "public_subnet_ids" {
-  name = "/${var.project}/${var.env}/public_subnet_ids"
+    name = "/${var.project}/${var.env}/public_subnet_ids"
 }
 
 data "aws_ssm_parameter" "bastion_sg_id" {
-  name = "/${var.project}/${var.env}/bastion_sg_id"
+    name = "/${var.project}/${var.env}/bastion_sg_id"
 }
