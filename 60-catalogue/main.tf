@@ -37,8 +37,21 @@ resource "terraform_data" "catalogue" {
   }
 }
 
-action "aws_ec2_instance" "catalogue" {
-  config{
-    instance_id = aws_instance.catalogue.id
-  }
+resource "aws_ec2_instance_state" "catalogue" {
+  instance_id = aws_instance.catalogue.id
+  state       = "stopped"
+  depends_on = [terraform_data.catalogue]
+}
+
+resource "aws_ami_from_instance" "catalogue" {
+  # roboshop-dev-catalogue-v3-i-h468sghy
+  name               = "${var.project}-${var.env}-catalogue"
+  source_instance_id = aws_instance.catalogue.id
+  depends_on = [aws_ec2_instance_state.catalogue]
+  tags = merge(
+    {
+        Name = "${var.project}-${var.env}-catalogue"
+    },
+    local.common_tags
+  )
 }
