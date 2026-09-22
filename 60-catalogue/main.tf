@@ -55,3 +55,104 @@ resource "aws_ami_from_instance" "catalogue" {
     local.common_tags
   )
 }
+
+
+
+
+resource "aws_lb_target_group" "catalogue" {
+  name        = "catalogue-tg"
+  port        = 8080
+  protocol    = "HTTP"
+  vpc_id      = data.aws_ssm_parameter.vpc_id.value
+  deregistration_delay = 30
+
+  health_check {
+    path                = "/health"
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
+    interval            = 10
+    timeout             = 5
+    matcher             = "200-299"
+    port                = 8080
+    protocol            = "HTTP"
+    
+  }
+}
+
+resource "aws_launch_template" "catalogue" {
+  name = "${var.project}-${var.env}-catalogue"
+  image_id = aws_ami_from_instance.catalogue.id
+  instance_initiated_shutdown_behavior = "terminate"
+
+  instance_type = "t3.micro"
+
+
+
+  vpc_security_group_ids = [local.catalogue_sg_id]
+  update_default_version = true
+
+  tag_specifications {
+    resource_type = "volume"
+
+    tags = merge(
+      {
+          Name = "${var.project}-${var.env}-catalogue"
+      },
+      local.common_tags
+    )
+  }
+  tags = merge(
+    {
+        Name = "${var.project}-${var.env}-catalogue"
+    },
+    local.common_tags
+  )
+ 
+}
+
+
+# resource "aws_autoscaling_group" "catalogue" {
+#   name                      = "${var.project}-${var.env}-catalogue"
+#   max_size                  = 10
+#   min_size                  = 1
+#   health_check_grace_period = 120
+#   health_check_type         = "ELB"
+#   desired_capacity          = 1
+#   force_delete              = false
+
+#   launch_template {
+#     id      = aws_launch_template.catalogue.id
+#     version = "$Latest"
+#   }
+
+  
+#   vpc_zone_identifier       = [local.private_subnet_ids]
+#   target_group_arns = [aws_lb_target_group.catalogue.arn]
+
+#   instance_refresh {
+#     strategy = "Rolling"
+#     preferences {
+#       min_healthy_percentage = 50
+#     }
+#     triggers = ["launch_template"]
+#   }
+
+#   dynamic "tag" {
+#     for_each = merge(
+#         {
+#             Name = "${var.project}-${var.env}-catalogue"
+#         },
+#         local.common_tags
+#     )
+#     content {
+#       key                 = tag.key
+#       value               = tag.value
+#       propagate_at_launch = true
+#     }
+#   }
+
+#   # with in 15min autoscaling should be successful
+#   timeouts {
+#     delete = "15m"
+#   }
+# }
