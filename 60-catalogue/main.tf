@@ -1,12 +1,12 @@
 resource "aws_instance" "catalogue" {
-  ami                    = local.ami_id
-  instance_type          = "t3.micro"
-  subnet_id              = local.private_subnet_ids
+  ami           = local.ami_id
+  instance_type = "t3.micro"
+  subnet_id = local.private_subnet_ids
   vpc_security_group_ids = [local.catalogue_sg_id]
 
   tags = merge(
     {
-      Name = "${var.project}-${var.env}-catalogue"
+        Name = "${var.project}-${var.env}-catalogue"
     },
     local.common_tags
   )
@@ -25,14 +25,14 @@ resource "terraform_data" "catalogue" {
   }
 
   provisioner "file" {
-    source      = "bootstrap.sh"      # Local file path
-    destination = "/tmp/bootstrap.sh" # Destination path on the remote machine
+    source      = "bootstrap.sh" # Local file path
+    destination = "/tmp/bootstrap.sh"    # Destination path on the remote machine
   }
 
   provisioner "remote-exec" {
     inline = [
-      "chmod +x /tmp/bootstrap.sh",
-      "sudo sh /tmp/bootstrap.sh catalogue dev ${var.env} ${var.app_version} "
+        "chmod +x /tmp/bootstrap.sh",
+        "sudo sh /tmp/bootstrap.sh catalogue ${var.env} ${var.app_version}"
     ]
   }
 }
@@ -40,67 +40,82 @@ resource "terraform_data" "catalogue" {
 resource "aws_ec2_instance_state" "catalogue" {
   instance_id = aws_instance.catalogue.id
   state       = "stopped"
-  depends_on  = [terraform_data.catalogue]
+  depends_on = [terraform_data.catalogue]
 }
 
 resource "aws_ami_from_instance" "catalogue" {
   # roboshop-dev-catalogue-v3-i-h468sghy
-  name               = "${var.project}-${var.env}-catalogue"
+  name               = "${var.project}-${var.env}-catalogue-${var.app_version}-${aws_instance.catalogue.id}"
   source_instance_id = aws_instance.catalogue.id
-  depends_on         = [aws_ec2_instance_state.catalogue]
-
+  depends_on = [aws_ec2_instance_state.catalogue]
   tags = merge(
     {
-      Name = "${var.project}-${var.env}-catalogue"
+        Name = "${var.project}-${var.env}-catalogue"
     },
     local.common_tags
   )
 }
 
 resource "aws_lb_target_group" "catalogue" {
-  name                 = "catalogue-tg"
-  port                 = 8080
-  protocol             = "HTTP"
-  vpc_id               = data.aws_ssm_parameter.vpc_id.value
-  deregistration_delay = 30
+  name     = "${var.project}-${var.env}-catalogue"
+  port     = 8080
+  protocol = "HTTP"
+  vpc_id   = local.vpc_id
+  deregistration_delay = 60
 
   health_check {
-    path                = "/health"
-    healthy_threshold   = 3
+    healthy_threshold = 2
+    interval = 10
+    matcher = "200-299"
+    path = "/health"
+    port = 8080
+    protocol = "HTTP"
+    timeout = 2
     unhealthy_threshold = 3
-    interval            = 10
-    timeout             = 5
-    matcher             = "200-299"
-    port                = 8080
-    protocol            = "HTTP"
   }
 }
 
 resource "aws_launch_template" "catalogue" {
-  name                                 = "${var.project}-${var.env}-catalogue"
-  image_id                             = aws_ami_from_instance.catalogue.id
-  instance_initiated_shutdown_behavior = "terminate"
-  instance_type                        = "t3.micro"
-  vpc_security_group_ids               = [local.catalogue_sg_id]
-  update_default_version               = true
+  name = "${var.project}-${var.env}-catalogue"
+  image_id = aws_ami_from_instance.catalogue.id
 
+  # once autoscaling sees less traffic, it will terminate the instance
+  instance_initiated_shutdown_behavior = "terminate"
+  instance_type = "t3.micro"
+  vpc_security_group_ids = [local.catalogue_sg_id]
+
+  # each time we apply terraform this version will be updated as default
+  update_default_version = true
+  
+  # tags for instances created by launch template through autoscaling
+  tag_specifications {
+    resource_type = "instance"
+
+    tags = merge(
+        {
+            Name = "${var.project}-${var.env}-catalogue"
+        },
+        local.common_tags
+    )
+  }
+  # tags for volumes created by instances
   tag_specifications {
     resource_type = "volume"
 
     tags = merge(
-      {
-        Name = "${var.project}-${var.env}-catalogue"
-      },
-      local.common_tags
+        {
+            Name = "${var.project}-${var.env}-catalogue"
+        },
+        local.common_tags
     )
   }
-
+  # tags for launch template
   tags = merge(
-    {
-      Name = "${var.project}-${var.env}-catalogue"
-    },
-    local.common_tags
-  )
+        {
+            Name = "${var.project}-${var.env}-catalogue"
+        },
+        local.common_tags
+    )
 }
 
 resource "aws_autoscaling_group" "catalogue" {
@@ -117,8 +132,9 @@ resource "aws_autoscaling_group" "catalogue" {
     version = "$Latest"
   }
 
-  vpc_zone_identifier = [local.private_subnet_ids]
-  target_group_arns   = [aws_lb_target_group.catalogue.arn]
+  
+  vpc_zone_identifier       = [local.private_subnet_ids]
+  target_group_arns = [aws_lb_target_group.catalogue.arn]
 
   instance_refresh {
     strategy = "Rolling"
@@ -130,10 +146,10 @@ resource "aws_autoscaling_group" "catalogue" {
 
   dynamic "tag" {
     for_each = merge(
-      {
-        Name = "${var.project}-${var.env}-catalogue"
-      },
-      local.common_tags
+        {
+            Name = "${var.project}-${var.env}-catalogue"
+        },
+        local.common_tags
     )
     content {
       key                 = tag.key
@@ -142,16 +158,16 @@ resource "aws_autoscaling_group" "catalogue" {
     }
   }
 
-  # within 15min autoscaling should be successful
+  # with in 15min autoscaling should be successful
   timeouts {
     delete = "15m"
   }
 }
 
 resource "aws_autoscaling_policy" "catalogue" {
-  autoscaling_group_name    = aws_autoscaling_group.catalogue.name
-  name                      = "${var.project}-${var.env}-catalogue"
-  policy_type               = "TargetTrackingScaling"
+  autoscaling_group_name = aws_autoscaling_group.catalogue.name
+  name                   = "${var.project}-${var.env}-catalogue"
+  policy_type            = "TargetTrackingScaling"
   estimated_instance_warmup = 120
 
   target_tracking_configuration {
@@ -185,7 +201,7 @@ resource "terraform_data" "catalogue_delete" {
     aws_instance.catalogue.id
   ]
   depends_on = [aws_autoscaling_policy.catalogue]
-
+  
   # it executes in bastion
   provisioner "local-exec" {
     command = "aws ec2 terminate-instances --instance-ids ${aws_instance.catalogue.id} "
