@@ -106,3 +106,17 @@ resource "aws_security_group_rule" "catalogue_accepting_from_backend_alb" {
 
   security_group_id = local.catalogue_sg_id
 }
+
+
+
+resource "aws_security_group_rule" "frontend_alb_accepting_from_public" {
+  type              = "ingress"
+  from_port         = 443
+  to_port           = 443 
+  cidr_blocks       = ["0.0.0.0/0"]
+  protocol          = "tcp"
+  source_security_group_id = local.backend_alb_sg_id
+
+  security_group_id = local.frontend_alb_sg_id
+}
+
