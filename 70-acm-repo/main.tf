@@ -5,8 +5,7 @@ resource "aws_acm_certificate" "roboshop" {
   tags = merge(
     {
       Name = "${var.project}-${var.env}-${var.domain_name}-cert"
-    },
-    var.common_tags
+    }
   )
 
   lifecycle {
@@ -30,7 +29,7 @@ resource "aws_route53_record" "roboshop" {
   records         = [each.value.record]
   ttl             = 60
   type            = each.value.type
-  zone_id         = aws_route53_zone.roboshop.zone_id
+  zone_id         = var.zone_id
 }
 
 
