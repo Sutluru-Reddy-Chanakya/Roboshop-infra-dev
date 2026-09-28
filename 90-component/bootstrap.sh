@@ -8,6 +8,6 @@ dnf install ansible -y
 cd /home/ec2-user
 git clone https://github.com/Sutluru-Reddy-Chanakya/Ansible-Roboshop-roles-tf.git
 
-cd Ansible-roboshop-roles-tf
+cd Ansible-Roboshop-roles-tf
 git pull
 ansible-playbook -e component=$component -e env=$environment -e app_version=$app_version roboshop.yml
