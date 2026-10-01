@@ -30,6 +30,6 @@ variable "sg_names" {
         "bastion",
        
         # Openvpn
-        #"openvpn"
+        "openvpn"
     ]
 }
